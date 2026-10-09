@@ -1,0 +1,14 @@
+# Ignore environment variables containing AWS secret keys
+.env
+backend-api/.env
+
+# Ignore dependencies and temporary files
+node_modules/
+__pycache__/
+*.pyc
+
+# Ignore Terraform state & sensitive variables
+.terraform/
+*.tfstate
+*.tfstate.backup
+terraform.tfvars

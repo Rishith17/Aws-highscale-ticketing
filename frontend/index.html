@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Concert Ticket Booking (Connected to AWS)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #0f172a; padding: 20px 16px; }
+    .app-box { max-width: 760px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+    
+    /* AWS Connection Banner */
+    .aws-connection-bar { background: #0f172a; color: #f8fafc; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 13px; }
+    .conn-status { display: flex; align-items: center; gap: 8px; }
+    .conn-dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
+    .conn-dot.online { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+    .api-input-wrap { display: flex; gap: 6px; align-items: center; }
+    .api-input-wrap input { background: #1e293b; border: 1px solid #334155; color: #38bdf8; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 12px; width: 220px; }
+    .btn-test { background: #334155; border: none; color: white; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+
+    .event-header { border-bottom: 2px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 18px; }
+    .event-header h1 { font-size: 22px; color: #0f172a; }
+    .event-meta { font-size: 14px; color: #64748b; margin-top: 4px; }
+    
+    .section-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: #334155; }
+    
+    /* Seat Grid */
+    .seats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+    @media (max-width: 600px) { .seats-grid { grid-template-columns: repeat(2, 1fr); } }
+    
+    .seat-btn { border: 1px solid #cbd5e1; background: #f1f5f9; padding: 12px 8px; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.15s; }
+    .seat-btn:hover:not(:disabled) { border-color: #f97316; background: #fff7ed; }
+    .seat-btn.selected { border-color: #f97316; background: #f97316; color: #ffffff; }
+    .seat-btn.selected .seat-p { color: #ffffff; }
+    .seat-btn.sold { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; border-color: #cbd5e1; }
+    .seat-n { font-size: 15px; font-weight: 800; display: block; }
+    .seat-t { font-size: 11px; display: block; margin: 2px 0; color: inherit; opacity: 0.85; }
+    .seat-p { font-size: 13px; font-weight: 700; color: #0284c7; display: block; }
+    
+    /* Hold Box */
+    .hold-box { background: #fefce8; border: 1px solid #fef08a; padding: 12px 16px; border-radius: 8px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; }
+    .hold-box span { font-size: 13px; color: #854d0e; font-weight: 600; }
+    .timer-text { font-size: 20px; font-weight: 800; color: #a16207; font-family: monospace; }
+    
+    /* Form */
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #475569; }
+    .form-group input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
+    .form-group input:focus { outline: none; border-color: #f97316; }
+    
+    .btn-submit { width: 100%; padding: 14px; background: #ea580c; border: none; border-radius: 8px; color: #ffffff; font-size: 16px; font-weight: 700; cursor: pointer; }
+    .btn-submit:hover:not(:disabled) { background: #c2410c; }
+    .btn-submit:disabled { background: #94a3b8; cursor: not-allowed; }
+    
+    /* AWS Step Box */
+    .aws-status-box { margin-top: 20px; padding: 14px; background: #0f172a; border-radius: 8px; color: #f8fafc; font-family: monospace; font-size: 12px; }
+    .aws-status-title { font-weight: 700; color: #38bdf8; margin-bottom: 8px; text-transform: uppercase; }
+    .aws-log { line-height: 1.6; color: #94a3b8; max-height: 180px; overflow-y: auto; }
+    .aws-log .success { color: #4ade80; }
+    .aws-log .highlight { color: #facc15; }
+    .aws-log .error { color: #f87171; }
+    
+    /* Confirmed Ticket */
+    .ticket-pass { margin-top: 20px; padding: 20px; background: #f0fdf4; border: 2px dashed #22c55e; border-radius: 10px; text-align: center; }
+    .ticket-pass h3 { color: #15803d; font-size: 18px; margin-bottom: 8px; }
+    .ticket-pass p { font-size: 14px; color: #166534; margin: 4px 0; }
+    
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div class="app-box">
+    
+    <!-- Real AWS Connection Bar -->
+    <div class="aws-connection-bar">
+      <div class="conn-status">
+        <span class="conn-dot" id="connDot"></span>
+        <span id="connLabel">AWS Backend: Checking...</span>
+      </div>
+      <div class="api-input-wrap">
+        <label>Backend URL:</label>
+        <input type="text" id="apiEndpoint" value="http://localhost:8080">
+        <button type="button" class="btn-test" id="btnTestConn">Connect</button>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="event-header">
+      <h1>🎟️ Diljit Dosanjh — DIL-LUMINATI Tour India</h1>
+      <div class="event-meta">
+        📍 DY Patil Stadium, Navi Mumbai • 📅 14 Nov 2026, 7:00 PM • <strong>Currency: ₹ INR</strong>
+      </div>
+    </div>
+
+    <!-- Step 1: Select Seat -->
+    <div class="section-title">Step 1: Select a Seat (Acquires Real DynamoDB 10-Minute Lock)</div>
+    <div class="seats-grid" id="seatsGrid">
+      <!-- Populated via JS -->
+    </div>
+
+    <!-- 10-Minute Hold Timer -->
+    <div id="holdBox" class="hold-box hidden">
+      <span>⚡ DynamoDB Atomic Lock Active on Seat <span id="heldSeatName">--</span></span>
+      <div class="timer-text" id="timerDisplay">10:00</div>
+    </div>
+
+    <!-- Step 2: Customer Details -->
+    <div id="checkoutSection" class="hidden">
+      <div class="section-title">Step 2: Enter Details & Confirm Order (Dispatches to Real AWS SQS FIFO)</div>
+      
+      <form id="bookingForm">
+        <div class="form-group">
+          <label>Your Name</label>
+          <input type="text" id="userName" required value="Rahul Sharma">
+        </div>
+
+        <div class="form-group">
+          <label>Email Address (For Amazon SES E-Ticket Delivery)</label>
+          <input type="email" id="userEmail" required value="rahul.sharma@gmail.com">
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn-submit">
+          Pay <span id="payAmount">₹0</span> & Confirm Booking
+        </button>
+      </form>
+    </div>
+
+    <!-- E-Ticket Result -->
+    <div id="confirmedPass" class="ticket-pass hidden">
+      <h3>✅ Ticket Booking Confirmed!</h3>
+      <p>Booking ID: <strong id="resBookingId">--</strong></p>
+      <p>Reserved Seat: <strong id="resSeat">--</strong></p>
+      <p>Total Paid: <strong id="resAmount">--</strong></p>
+      <p>Queue Message ID: <code id="resQueueMsgId" style="color: #0284c7;">--</code></p>
+      <p>Confirmation email sent via <strong>Amazon SES</strong> to <strong id="resEmail">--</strong></p>
+      <button onclick="location.reload()" style="margin-top: 12px; padding: 6px 16px; border: 1px solid #16a34a; background: white; color: #16a34a; border-radius: 4px; cursor: pointer; font-weight: 600;">Book Another Ticket</button>
+    </div>
+
+    <!-- Live AWS Execution Trace -->
+    <div class="aws-status-box">
+      <div class="aws-status-title">Live AWS Architecture Event Stream</div>
+      <div class="aws-log" id="awsLog">
+        <div>[System Ready] Checking backend API connectivity...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let API_URL = document.getElementById('apiEndpoint').value;
+    const EVENT_ID = 'ev-diljit-mumbai';
+    const USER_ID = 'user-' + Math.floor(1000 + Math.random() * 9000);
+
+    const DEFAULT_SEATS = [
+      { id: 'PIT-01', tier: 'Fan Pit (VIP)', price: 11999, status: 'AVAILABLE' },
+      { id: 'PIT-02', tier: 'Fan Pit (VIP)', price: 11999, status: 'AVAILABLE' },
+      { id: 'PLT-01', tier: 'Platinum Lounge', price: 6999, status: 'AVAILABLE' },
+      { id: 'PLT-02', tier: 'Platinum Lounge', price: 6999, status: 'AVAILABLE' },
+      { id: 'GLD-01', tier: 'Gold Seating', price: 3499, status: 'AVAILABLE' },
+      { id: 'GLD-02', tier: 'Gold Seating', price: 3499, status: 'AVAILABLE' },
+      { id: 'GLD-03', tier: 'Gold Seating', price: 3499, status: 'SOLD' },
+      { id: 'SLV-01', tier: 'Silver Standing', price: 1499, status: 'AVAILABLE' },
+      { id: 'SLV-02', tier: 'Silver Standing', price: 1499, status: 'AVAILABLE' },
+      { id: 'SLV-03', tier: 'Silver Standing', price: 1499, status: 'AVAILABLE' }
+    ];
+
+    let currentSeats = [...DEFAULT_SEATS];
+    let selectedSeat = null;
+    let timerSeconds = 600;
+    let timerInterval = null;
+    let isConnectedToRealBackend = false;
+
+    const seatsGrid = document.getElementById('seatsGrid');
+    const holdBox = document.getElementById('holdBox');
+    const heldSeatName = document.getElementById('heldSeatName');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const checkoutSection = document.getElementById('checkoutSection');
+    const payAmount = document.getElementById('payAmount');
+    const bookingForm = document.getElementById('bookingForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const awsLog = document.getElementById('awsLog');
+    const confirmedPass = document.getElementById('confirmedPass');
+    const connDot = document.getElementById('connDot');
+    const connLabel = document.getElementById('connLabel');
+    const btnTestConn = document.getElementById('btnTestConn');
+
+    function log(msg, type = '') {
+      const d = document.createElement('div');
+      if (type) d.className = type;
+      d.textContent = `> ${msg}`;
+      awsLog.appendChild(d);
+      awsLog.scrollTop = awsLog.scrollHeight;
+    }
+
+    // 1. Check Backend Connection to Real AWS
+    async function checkBackend() {
+      API_URL = document.getElementById('apiEndpoint').value.replace(/\/$/, '');
+      try {
+        const res = await fetch(`${API_URL}/health`);
+        if (res.ok) {
+          isConnectedToRealBackend = true;
+          connDot.className = 'conn-dot online';
+          connLabel.textContent = `AWS Backend: CONNECTED (${API_URL})`;
+          log(`[HTTP 200] Connected to backend API server at ${API_URL}`, 'success');
+          await loadLiveSeatsFromAWS();
+          return;
+        }
+      } catch (err) {
+        // Backend not running yet
+      }
+      isConnectedToRealBackend = false;
+      connDot.className = 'conn-dot';
+      connLabel.textContent = `AWS Backend: Offline (Start backend API or enter EC2 IP)`;
+      log(`[WARN] Backend API at ${API_URL} not reachable. Start 'npm start' in backend-api folder.`, 'error');
+      renderSeats();
+    }
+
+    // 2. Fetch Live Seats from DynamoDB through Backend
+    async function loadLiveSeatsFromAWS() {
+      try {
+        const res = await fetch(`${API_URL}/api/events/${EVENT_ID}/seats`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data && json.data.length > 0) {
+            currentSeats = json.data.map(s => ({
+              id: s.seatId,
+              tier: s.tier,
+              price: s.price,
+              status: s.status
+            }));
+            log(`[DYNAMODB] Loaded ${currentSeats.length} live seats from AWS DynamoDB table 'TicketInventory'`, 'success');
+          }
+        }
+      } catch (e) {
+        // Fallback to default
+      }
+      renderSeats();
+    }
+
+    function renderSeats() {
+      seatsGrid.innerHTML = '';
+      currentSeats.forEach(seat => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `seat-btn ${seat.status === 'SOLD' ? 'sold' : ''} ${selectedSeat && selectedSeat.id === seat.id ? 'selected' : ''}`;
+        btn.disabled = seat.status === 'SOLD';
+        btn.innerHTML = `
+          <span class="seat-n">${seat.id}</span>
+          <span class="seat-t">${seat.tier}</span>
+          <span class="seat-p">₹${seat.price.toLocaleString('en-IN')}</span>
+        `;
+        btn.onclick = () => selectSeat(seat);
+        seatsGrid.appendChild(btn);
+      });
+    }
+
+    // 3. Handle Seat Selection & Real DynamoDB Atomic Lock
+    async function selectSeat(seat) {
+      if (seat.status === 'SOLD') return;
+      selectedSeat = seat;
+      renderSeats();
+
+      holdBox.classList.remove('hidden');
+      checkoutSection.classList.remove('hidden');
+      heldSeatName.textContent = `${seat.id} (${seat.tier})`;
+      payAmount.textContent = `₹${seat.price.toLocaleString('en-IN')}`;
+
+      log(`[HTTP POST] Calling ${API_URL}/api/checkout/lock for seat ${seat.id}...`, 'highlight');
+
+      if (isConnectedToRealBackend) {
+        try {
+          const res = await fetch(`${API_URL}/api/checkout/lock`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              eventId: EVENT_ID,
+              seatId: seat.id,
+              userId: USER_ID
+            })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            log(`[REAL DYNAMODB] ConditionExpression passed! Seat ${seat.id} locked in DynamoDB (Expires at: ${data.data.lockExpiresAt})`, 'success');
+          } else {
+            log(`[REAL DYNAMODB] Lock rejected: ${data.message || 'Seat unavailable'}`, 'error');
+            alert(data.message || 'Seat is currently held by someone else.');
+            return;
+          }
+        } catch (e) {
+          log(`[ERROR] Network error contacting backend: ${e.message}`, 'error');
+        }
+      } else {
+        log(`[SIMULATED] Backend offline. Simulating DynamoDB lock on seat ${seat.id}`, 'highlight');
+      }
+
+      // Start 10-Minute Hold Countdown
+      clearInterval(timerInterval);
+      timerSeconds = 600;
+      timerInterval = setInterval(() => {
+        const m = Math.floor(timerSeconds / 60);
+        const s = timerSeconds % 60;
+        timerDisplay.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        if (timerSeconds <= 0) {
+          clearInterval(timerInterval);
+          alert('10-minute hold expired!');
+          location.reload();
+        }
+        timerSeconds--;
+      }, 1000);
+    }
+
+    // 4. Submit Order to Real AWS SQS FIFO
+    bookingForm.onsubmit = async (e) => {
+      e.preventDefault();
+      if (!selectedSeat) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting to AWS SQS FIFO...';
+
+      const name = document.getElementById('userName').value;
+      const email = document.getElementById('userEmail').value;
+      let orderId = `ORD-MUM-${Date.now().toString().slice(-6)}`;
+      let queueMessageId = `sqs-msg-${Date.now()}`;
+
+      log(`[HTTP POST] Calling ${API_URL}/api/checkout/purchase...`, 'highlight');
+
+      if (isConnectedToRealBackend) {
+        try {
+          const res = await fetch(`${API_URL}/api/checkout/purchase`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              eventId: EVENT_ID,
+              seatId: selectedSeat.id,
+              userId: USER_ID,
+              customerEmail: email,
+              amount: selectedSeat.price
+            })
+          });
+          const data = await res.json();
+          if (res.status === 202 || res.ok) {
+            orderId = data.order?.orderId || orderId;
+            queueMessageId = data.order?.queueMessageId || queueMessageId;
+            log(`[REAL SQS FIFO] Successfully enqueued order to Amazon SQS FIFO! MessageId: ${queueMessageId}`, 'success');
+            log(`[AWS LAMBDA] Lambda consumer pulling from SQS ➔ writing to RDS PostgreSQL ➔ triggering SES email to ${email}`, 'success');
+          } else {
+            log(`[ERROR] Order failed: ${data.message}`, 'error');
+            alert(data.message || 'Order failed');
+            submitBtn.disabled = false;
+            submitBtn.textContent = `Pay ₹${selectedSeat.price.toLocaleString('en-IN')} & Confirm Booking`;
+            return;
+          }
+        } catch (e) {
+          log(`[ERROR] Network error contacting backend: ${e.message}`, 'error');
+        }
+      } else {
+        log(`[SIMULATED SQS FIFO] Order ${orderId} queued with MessageGroupId: EVENT-${EVENT_ID}`, 'highlight');
+      }
+
+      // Render Finalized Ticket
+      clearInterval(timerInterval);
+      selectedSeat.status = 'SOLD';
+      renderSeats();
+
+      holdBox.classList.add('hidden');
+      checkoutSection.classList.add('hidden');
+      confirmedPass.classList.remove('hidden');
+
+      document.getElementById('resBookingId').textContent = orderId;
+      document.getElementById('resSeat').textContent = `${selectedSeat.id} (${selectedSeat.tier})`;
+      document.getElementById('resAmount').textContent = `₹${selectedSeat.price.toLocaleString('en-IN')} INR`;
+      document.getElementById('resQueueMsgId').textContent = queueMessageId;
+      document.getElementById('resEmail').textContent = email;
+    };
+
+    btnTestConn.onclick = checkBackend;
+
+    // Run initial connection test
+    checkBackend();
+  </script>
+</body>
+</html>

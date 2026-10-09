@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # LocalStack simulating AWS DynamoDB, SQS, SES locally
+  localstack:
+    image: localstack/localstack:latest
+    container_name: ticketing-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=dynamodb,sqs,ses
+      - AWS_DEFAULT_REGION=us-east-1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "./scripts/init-localstack.sh:/etc/localstack/init/ready.d/init-aws.sh"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  # PostgreSQL simulating RDS Multi-AZ Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ticketing-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=ticketdb
+      - POSTGRES_USER=dbadmin
+      - POSTGRES_PASSWORD=SecurePassword123!
+    volumes:
+      - "./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql"
+
+  # Backend Node.js API simulating EC2 instances behind ALB
+  backend:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    container_name: ticketing-backend-api
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - AWS_REGION=us-east-1
+      - LOCALSTACK_ENDPOINT=http://localstack:4566
+      - DYNAMODB_TABLE_NAME=TicketInventory
+      - SQS_QUEUE_URL=http://localstack:4566/000000000000/ticket-purchases.fifo
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=ticketdb
+      - DB_USER=dbadmin
+      - DB_PASSWORD=SecurePassword123!
+    depends_on:
+      - localstack
+      - postgres

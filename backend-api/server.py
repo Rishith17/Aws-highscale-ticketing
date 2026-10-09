@@ -72,6 +72,18 @@ class AWSHandler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = urlparse(self.path).path
+
+        # 0. Serve UI HTML at root
+        if path in ['/', '/index.html']:
+            frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
+            html_path = os.path.join(frontend_dir, "index.html")
+            if os.path.exists(html_path):
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html; charset=utf-8')
+                self.end_headers()
+                with open(html_path, 'rb') as f:
+                    self.wfile.write(f.read())
+                return
         
         # 1. Health check
         if path == '/health':

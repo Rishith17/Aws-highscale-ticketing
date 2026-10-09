@@ -36,6 +36,21 @@ if AWS_ACCESS_KEY and AWS_SECRET_KEY:
 
 ddb = boto3.client('dynamodb', **kwargs)
 sqs = boto3.client('sqs', **kwargs)
+cw = boto3.client('cloudwatch', **kwargs)
+
+def log_cloudwatch_metric(name, value, unit='Count'):
+    try:
+        cw.put_metric_data(
+            Namespace='ConcertTicketing',
+            MetricData=[{
+                'MetricName': name,
+                'Value': value,
+                'Unit': unit,
+                'Timestamp': time.time()
+            }]
+        )
+    except Exception as e:
+        print(f"[CW WARN] Metric {name} error: {e}")
 
 class AWSHandler(http.server.BaseHTTPRequestHandler):
     def _set_cors(self, status=200):
@@ -133,6 +148,9 @@ class AWSHandler(http.server.BaseHTTPRequestHandler):
                         ':now': {'N': str(now)}
                     }
                 )
+                # Emit CloudWatch Metric
+                log_cloudwatch_metric('SeatLocksAcquired', 1)
+
                 self._set_cors(200)
                 self.wfile.write(json.dumps({
                     "success": True,
@@ -190,6 +208,10 @@ class AWSHandler(http.server.BaseHTTPRequestHandler):
                         ':oid': {'S': order_id}
                     }
                 )
+
+                # Emit CloudWatch Metrics
+                log_cloudwatch_metric('OrdersQueued', 1)
+                log_cloudwatch_metric('RevenueINR', float(amount), 'None')
 
                 self._set_cors(202)
                 self.wfile.write(json.dumps({

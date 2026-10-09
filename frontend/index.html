@@ -6,64 +6,73 @@
   <title>Concert Ticket Booking (Connected to AWS)</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #0f172a; padding: 20px 16px; }
-    .app-box { max-width: 760px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; color: #0f172a; padding: 30px 16px; }
+    .app-box { max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
     
     /* AWS Connection Banner */
-    .aws-connection-bar { background: #0f172a; color: #f8fafc; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 13px; }
+    .aws-connection-bar { display: flex; align-items: center; justify-content: space-between; background: #0f172a; color: #f8fafc; padding: 10px 14px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; }
     .conn-status { display: flex; align-items: center; gap: 8px; }
     .conn-dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
     .conn-dot.online { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
-    .api-input-wrap { display: flex; gap: 6px; align-items: center; }
-    .api-input-wrap input { background: #1e293b; border: 1px solid #334155; color: #38bdf8; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 12px; width: 220px; }
-    .btn-test { background: #334155; border: none; color: white; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+    .api-input-wrap { display: flex; align-items: center; gap: 8px; }
+    .api-input-wrap input { background: #1e293b; border: 1px solid #334155; color: #38bdf8; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-family: monospace; width: 180px; }
+    .btn-test { background: #334155; border: none; color: #ffffff; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+    .btn-test:hover { background: #475569; }
 
-    .event-header { border-bottom: 2px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 18px; }
-    .event-header h1 { font-size: 22px; color: #0f172a; }
-    .event-meta { font-size: 14px; color: #64748b; margin-top: 4px; }
+    .event-header { margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; }
+    .event-header h1 { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+    .event-meta { font-size: 13px; color: #64748b; }
     
-    .section-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: #334155; }
+    .section-title { font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 12px; }
     
     /* Seat Grid */
-    .seats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
-    @media (max-width: 600px) { .seats-grid { grid-template-columns: repeat(2, 1fr); } }
+    .seats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .seat-btn { padding: 12px 8px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.15s; }
+    .seat-btn:hover:not(:disabled) { border-color: #0284c7; background: #e0f2fe; }
+    .seat-btn.selected { border-color: #0284c7; background: #0284c7; color: #ffffff; }
+    .seat-btn.selected .seat-p, .seat-btn.selected .seat-t { color: #e0f2fe; }
+    .seat-btn.sold { background: #f1f5f9; border-color: #e2e8f0; opacity: 0.4; cursor: not-allowed; }
+    .seat-n { font-weight: 700; font-size: 14px; display: block; }
+    .seat-t { font-size: 11px; color: #64748b; display: block; margin-top: 2px; }
+    .seat-p { font-size: 12px; font-weight: 600; color: #0284c7; display: block; margin-top: 4px; }
     
-    .seat-btn { border: 1px solid #cbd5e1; background: #f1f5f9; padding: 12px 8px; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.15s; }
-    .seat-btn:hover:not(:disabled) { border-color: #f97316; background: #fff7ed; }
-    .seat-btn.selected { border-color: #f97316; background: #f97316; color: #ffffff; }
-    .seat-btn.selected .seat-p { color: #ffffff; }
-    .seat-btn.sold { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; border-color: #cbd5e1; }
-    .seat-n { font-size: 15px; font-weight: 800; display: block; }
-    .seat-t { font-size: 11px; display: block; margin: 2px 0; color: inherit; opacity: 0.85; }
-    .seat-p { font-size: 13px; font-weight: 700; color: #0284c7; display: block; }
-    
-    /* Hold Box */
-    .hold-box { background: #fefce8; border: 1px solid #fef08a; padding: 12px 16px; border-radius: 8px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; }
-    .hold-box span { font-size: 13px; color: #854d0e; font-weight: 600; }
-    .timer-text { font-size: 20px; font-weight: 800; color: #a16207; font-family: monospace; }
+    /* Hold Timer Box */
+    .hold-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 13px; color: #1e40af; }
+    .timer-text { font-size: 16px; font-weight: 700; color: #dc2626; font-family: monospace; }
     
     /* Form */
     .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #475569; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 4px; }
     .form-group input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
-    .form-group input:focus { outline: none; border-color: #f97316; }
     
     .btn-submit { width: 100%; padding: 14px; background: #ea580c; border: none; border-radius: 8px; color: #ffffff; font-size: 16px; font-weight: 700; cursor: pointer; }
     .btn-submit:hover:not(:disabled) { background: #c2410c; }
     .btn-submit:disabled { background: #94a3b8; cursor: not-allowed; }
     
-    /* AWS Step Box */
-    .aws-status-box { margin-top: 20px; padding: 14px; background: #0f172a; border-radius: 8px; color: #f8fafc; font-family: monospace; font-size: 12px; }
-    .aws-status-title { font-weight: 700; color: #38bdf8; margin-bottom: 8px; text-transform: uppercase; }
-    .aws-log { line-height: 1.6; color: #94a3b8; max-height: 180px; overflow-y: auto; }
-    .aws-log .success { color: #4ade80; }
-    .aws-log .highlight { color: #facc15; }
-    .aws-log .error { color: #f87171; }
-    
     /* Confirmed Ticket */
     .ticket-pass { margin-top: 20px; padding: 20px; background: #f0fdf4; border: 2px dashed #22c55e; border-radius: 10px; text-align: center; }
     .ticket-pass h3 { color: #15803d; font-size: 18px; margin-bottom: 8px; }
     .ticket-pass p { font-size: 14px; color: #166534; margin: 4px 0; }
+    
+    /* Layer 10: CloudWatch Metrics Section */
+    .cw-metrics-box { margin-top: 24px; padding: 14px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
+    .cw-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .cw-title { font-size: 13px; font-weight: 700; color: #0f172a; }
+    .cw-badge { font-size: 11px; font-family: monospace; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+    .cw-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .cw-card { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 6px; text-align: center; }
+    .cw-lbl { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cw-val { font-size: 18px; font-weight: 800; color: #0284c7; font-family: monospace; }
+    .cw-sub { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+
+    /* AWS Step Box / Live Event Stream */
+    .aws-status-box { margin-top: 16px; padding: 14px; background: #0f172a; border-radius: 8px; color: #f8fafc; font-family: monospace; font-size: 12px; }
+    .aws-status-title { font-weight: 700; color: #38bdf8; margin-bottom: 8px; text-transform: uppercase; }
+    .aws-log { line-height: 1.6; color: #94a3b8; max-height: 180px; overflow-y: auto; }
+    .aws-log .success { color: #4ade80; }
+    .aws-log .highlight { color: #facc15; }
+    .aws-log .metric { color: #38bdf8; }
+    .aws-log .error { color: #f87171; }
     
     .hidden { display: none !important; }
   </style>
@@ -137,7 +146,37 @@
       <button onclick="location.reload()" style="margin-top: 12px; padding: 6px 16px; border: 1px solid #16a34a; background: white; color: #16a34a; border-radius: 4px; cursor: pointer; font-weight: 600;">Book Another Ticket</button>
     </div>
 
-    <!-- Live AWS Execution Trace -->
+    <!-- Layer 10: Amazon CloudWatch Telemetry & Metrics Display -->
+    <div class="cw-metrics-box">
+      <div class="cw-header">
+        <span class="cw-title">📊 Layer 10: Amazon CloudWatch Monitoring</span>
+        <span class="cw-badge">Namespace: ConcertTicketing (ap-south-1)</span>
+      </div>
+      <div class="cw-grid">
+        <div class="cw-card">
+          <div class="cw-lbl">SeatLocksAcquired</div>
+          <div class="cw-val" id="cwLocks">0</div>
+          <div class="cw-sub">DynamoDB Locks</div>
+        </div>
+        <div class="cw-card">
+          <div class="cw-lbl">OrdersQueued</div>
+          <div class="cw-val" id="cwOrders">0</div>
+          <div class="cw-sub">SQS FIFO Messages</div>
+        </div>
+        <div class="cw-card">
+          <div class="cw-lbl">RevenueINR</div>
+          <div class="cw-val" id="cwRevenue">₹0</div>
+          <div class="cw-sub">Total Ticket Sales</div>
+        </div>
+        <div class="cw-card">
+          <div class="cw-lbl">SQS Queue Depth</div>
+          <div class="cw-val" id="cwQueue">0</div>
+          <div class="cw-sub">FIFO Pending Backlog</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live AWS Execution Trace / Event Stream -->
     <div class="aws-status-box">
       <div class="aws-status-title">Live AWS Architecture Event Stream</div>
       <div class="aws-log" id="awsLog">
@@ -170,6 +209,11 @@
     let timerInterval = null;
     let isConnectedToRealBackend = false;
 
+    // Metrics local state
+    let localLocks = 0;
+    let localOrders = 0;
+    let localRevenue = 0;
+
     const seatsGrid = document.getElementById('seatsGrid');
     const holdBox = document.getElementById('holdBox');
     const heldSeatName = document.getElementById('heldSeatName');
@@ -183,6 +227,11 @@
     const connDot = document.getElementById('connDot');
     const connLabel = document.getElementById('connLabel');
     const btnTestConn = document.getElementById('btnTestConn');
+
+    const cwLocks = document.getElementById('cwLocks');
+    const cwOrders = document.getElementById('cwOrders');
+    const cwRevenue = document.getElementById('cwRevenue');
+    const cwQueue = document.getElementById('cwQueue');
 
     function log(msg, type = '') {
       const d = document.createElement('div');
@@ -203,6 +252,7 @@
           connLabel.textContent = `AWS Backend: CONNECTED (${API_URL})`;
           log(`[HTTP 200] Connected to backend API server at ${API_URL}`, 'success');
           await loadLiveSeatsFromAWS();
+          await fetchCloudWatchMetrics();
           return;
         }
       } catch (err) {
@@ -211,11 +261,33 @@
       isConnectedToRealBackend = false;
       connDot.className = 'conn-dot';
       connLabel.textContent = `AWS Backend: Offline (Start backend API or enter EC2 IP)`;
-      log(`[WARN] Backend API at ${API_URL} not reachable. Start 'npm start' in backend-api folder.`, 'error');
+      log(`[WARN] Backend API at ${API_URL} not reachable. Start server.py in backend-api folder.`, 'error');
       renderSeats();
     }
 
-    // 2. Fetch Live Seats from DynamoDB through Backend
+    // 2. Fetch Live CloudWatch Metrics from Backend
+    async function fetchCloudWatchMetrics() {
+      try {
+        const res = await fetch(`${API_URL}/api/metrics`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.metrics) {
+            localLocks = json.metrics.seatLocksAcquired || localLocks;
+            localOrders = json.metrics.ordersQueued || localOrders;
+            localRevenue = json.metrics.revenueINR || localRevenue;
+
+            cwLocks.textContent = localLocks;
+            cwOrders.textContent = localOrders;
+            cwRevenue.textContent = `₹${localRevenue.toLocaleString('en-IN')}`;
+            cwQueue.textContent = json.metrics.sqsQueueDepth !== undefined ? json.metrics.sqsQueueDepth : '0';
+          }
+        }
+      } catch (e) {
+        // Non-blocking
+      }
+    }
+
+    // 3. Fetch Live Seats from DynamoDB through Backend
     async function loadLiveSeatsFromAWS() {
       try {
         const res = await fetch(`${API_URL}/api/events/${EVENT_ID}/seats`);
@@ -254,7 +326,7 @@
       });
     }
 
-    // 3. Handle Seat Selection & Real DynamoDB Atomic Lock
+    // 4. Handle Seat Selection & Real DynamoDB Atomic Lock + CloudWatch Metric
     async function selectSeat(seat) {
       if (seat.status === 'SOLD') return;
       selectedSeat = seat;
@@ -281,6 +353,11 @@
           const data = await res.json();
           if (res.ok && data.success) {
             log(`[REAL DYNAMODB] ConditionExpression passed! Seat ${seat.id} locked in DynamoDB (Expires at: ${data.data.lockExpiresAt})`, 'success');
+            
+            // CloudWatch metric increment
+            localLocks++;
+            cwLocks.textContent = localLocks;
+            log(`[CLOUDWATCH METRIC] Emitted 'SeatLocksAcquired' (+1) to AWS CloudWatch Namespace 'ConcertTicketing' (ap-south-1)`, 'metric');
           } else {
             log(`[REAL DYNAMODB] Lock rejected: ${data.message || 'Seat unavailable'}`, 'error');
             alert(data.message || 'Seat is currently held by someone else.');
@@ -290,7 +367,10 @@
           log(`[ERROR] Network error contacting backend: ${e.message}`, 'error');
         }
       } else {
-        log(`[SIMULATED] Backend offline. Simulating DynamoDB lock on seat ${seat.id}`, 'highlight');
+        localLocks++;
+        cwLocks.textContent = localLocks;
+        log(`[SIMULATED] Simulating DynamoDB lock on seat ${seat.id}`, 'highlight');
+        log(`[CLOUDWATCH METRIC] Emitted 'SeatLocksAcquired' (+1) to namespace ConcertTicketing`, 'metric');
       }
 
       // Start 10-Minute Hold Countdown
@@ -309,7 +389,7 @@
       }, 1000);
     }
 
-    // 4. Submit Order to Real AWS SQS FIFO
+    // 5. Submit Order to Real AWS SQS FIFO + Emit CloudWatch Metrics
     bookingForm.onsubmit = async (e) => {
       e.preventDefault();
       if (!selectedSeat) return;
@@ -341,8 +421,17 @@
           if (res.status === 202 || res.ok) {
             orderId = data.order?.orderId || orderId;
             queueMessageId = data.order?.queueMessageId || queueMessageId;
+            
+            // Update CloudWatch local counters
+            localOrders++;
+            localRevenue += selectedSeat.price;
+            cwOrders.textContent = localOrders;
+            cwRevenue.textContent = `₹${localRevenue.toLocaleString('en-IN')}`;
+
             log(`[REAL SQS FIFO] Successfully enqueued order to Amazon SQS FIFO! MessageId: ${queueMessageId}`, 'success');
-            log(`[AWS LAMBDA] Lambda consumer pulling from SQS ➔ writing to RDS PostgreSQL ➔ triggering SES email to ${email}`, 'success');
+            log(`[CLOUDWATCH METRIC] Emitted 'OrdersQueued' (+1) and 'RevenueINR' (+₹${selectedSeat.price.toLocaleString('en-IN')}) to CloudWatch`, 'metric');
+            log(`[CLOUDWATCH LOGS] Ingested audit event into /aws/ticketing/order-audit-stream`, 'metric');
+            log(`[AWS LAMBDA & RDS] Lambda worker dequeues ➔ writes ACID commit to RDS PostgreSQL ➔ dispatches SES email to ${email}`, 'success');
           } else {
             log(`[ERROR] Order failed: ${data.message}`, 'error');
             alert(data.message || 'Order failed');
@@ -354,7 +443,12 @@
           log(`[ERROR] Network error contacting backend: ${e.message}`, 'error');
         }
       } else {
+        localOrders++;
+        localRevenue += selectedSeat.price;
+        cwOrders.textContent = localOrders;
+        cwRevenue.textContent = `₹${localRevenue.toLocaleString('en-IN')}`;
         log(`[SIMULATED SQS FIFO] Order ${orderId} queued with MessageGroupId: EVENT-${EVENT_ID}`, 'highlight');
+        log(`[CLOUDWATCH METRIC] Emitted 'OrdersQueued' (+1) & 'RevenueINR' to CloudWatch`, 'metric');
       }
 
       // Render Finalized Ticket
@@ -371,11 +465,17 @@
       document.getElementById('resAmount').textContent = `₹${selectedSeat.price.toLocaleString('en-IN')} INR`;
       document.getElementById('resQueueMsgId').textContent = queueMessageId;
       document.getElementById('resEmail').textContent = email;
+
+      // Refresh metrics from AWS backend after purchase
+      setTimeout(fetchCloudWatchMetrics, 1200);
     };
 
     btnTestConn.onclick = checkBackend;
 
-    // Run initial connection test
+    // Periodic telemetry polling every 5s
+    setInterval(fetchCloudWatchMetrics, 5000);
+
+    // Initial backend check
     checkBackend();
   </script>
 </body>

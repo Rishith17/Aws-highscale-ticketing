@@ -1,6 +1,6 @@
 # High-Scale AWS Concert Ticketing System
 
-An event-driven ticket booking architecture built on AWS to handle massive flash-sale traffic spikes with zero overselling and zero database crashes.
+An event-driven ticket booking architecture built on AWS to handle massive flash-sale traffic spikes with zero overselling, zero database crashes, and full end-to-end CloudWatch observability.
 
 ---
 
@@ -17,6 +17,10 @@ An event-driven ticket booking architecture built on AWS to handle massive flash
 4. **Database Commit (ACID)**: An **AWS Lambda** worker pulls orders from the SQS queue in small, steady batches and commits the order into **Amazon RDS PostgreSQL** inside a safe transaction.
 5. **Permanent Allocation**: Lambda updates the seat state in DynamoDB from `LOCKED` to permanently `SOLD`.
 6. **E-Ticket Delivery**: Lambda invokes **Amazon SES** to send an official confirmation email containing the attendee pass and entry QR code.
+7. **Real-Time Telemetry & Monitoring (Layer 10: Amazon CloudWatch)**:
+   - Emits custom metrics under the **`ConcertTicketing`** namespace: `SeatLocksAcquired`, `OrdersQueued`, and `RevenueINR`.
+   - Tracks SQS backlog queue depth (`ApproximateNumberOfMessages`) in real-time to alert on demand surges.
+   - Aggregates operational logs in CloudWatch Logs for audit compliance.
 
 ---
 
@@ -42,6 +46,11 @@ An event-driven ticket booking architecture built on AWS to handle massive flash
        ├──► (6) Commit ACID Transaction (RDS PostgreSQL)
        ├──► (7) Mark Seat Status as "SOLD" (DynamoDB)
        └──► (8) Send E-Ticket with QR Code (Amazon SES)
+
+═════════════════════════════════════════════════════════════════════════════════════
+  [Layer 10: Amazon CloudWatch Monitoring & Metrics (Namespace: ConcertTicketing)]
+   • SeatLocksAcquired  • OrdersQueued  • RevenueINR (₹)  • SQS FIFO Queue Depth
+═════════════════════════════════════════════════════════════════════════════════════
 ```
 
 ---
@@ -51,6 +60,7 @@ An event-driven ticket booking architecture built on AWS to handle massive flash
 - **DynamoDB Atomic Locks**: Absorbs massive click-rushes at the edge without putting heavy query load on relational databases.
 - **SQS FIFO Queue**: Acts as a shock absorber so 50,000 simultaneous checkouts don't crash backend services.
 - **RDS PostgreSQL**: Keeps ACID-compliant financial receipts, user accounts, and permanent order records.
+- **Amazon CloudWatch**: Gives full visibility into business metrics (`RevenueINR`, `SeatLocksAcquired`) and system health (queue backlog).
 - **VPC Subnet Isolation**: Backend and databases live securely in private subnets with no public internet exposure.
 
 ---
@@ -59,9 +69,9 @@ An event-driven ticket booking architecture built on AWS to handle massive flash
 
 ```
 ├── frontend/
-│   └── index.html               # Booking UI with live AWS status & logs
+│   └── index.html               # Booking UI with live CloudWatch metrics & event stream
 ├── backend-api/
-│   ├── server.py                # Python Boto3 API (DynamoDB + SQS FIFO)
+│   ├── server.py                # Python Boto3 API (DynamoDB + SQS FIFO + CloudWatch metrics)
 │   ├── .env                     # AWS credentials & region configuration
 │   └── src/                     # Node.js alternative backend
 ├── lambda-order-processor/
@@ -99,22 +109,14 @@ python scripts/setup_aws_cloud.py
 
 ### 4. Start the Backend Server
 ```bash
-python backend-api/server.py
+cd backend-api
+python server.py
 ```
-Server starts on `http://localhost:8080`.
+Server runs on `http://localhost:8080`.
 
 ### 5. Open the Frontend
-Open `frontend/index.html` in any browser. The status bar will show:
-`🟢 AWS Backend: CONNECTED (http://localhost:8080)`
-
----
-
-## Full Infrastructure Deployment (Terraform)
-
-To deploy the complete multi-tier infrastructure (VPC, RDS, ALB, ASG, Lambda, DynamoDB, SQS):
-
-```bash
-cd terraform-simple
-terraform init
-terraform apply -auto-approve
-```
+Open `frontend/index.html` in any web browser. You will see:
+- Real-time seat inventory loaded from AWS DynamoDB.
+- 10-minute atomic locks executed with DynamoDB `ConditionExpression`.
+- Purchases dispatched to Amazon SQS FIFO.
+- Live **CloudWatch Metrics** (`SeatLocksAcquired`, `OrdersQueued`, `RevenueINR`).

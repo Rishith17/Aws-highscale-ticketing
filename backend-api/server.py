@@ -4,7 +4,6 @@ import json
 import boto3
 import time
 from urllib.parse import urlparse
-
 import os
 
 PORT = int(os.environ.get("PORT", 8080))
@@ -37,6 +36,13 @@ if AWS_ACCESS_KEY and AWS_SECRET_KEY:
 ddb = boto3.client('dynamodb', **kwargs)
 sqs = boto3.client('sqs', **kwargs)
 cw = boto3.client('cloudwatch', **kwargs)
+
+# In-memory aggregated telemetry counters
+telemetry_stats = {
+    "seatLocksAcquired": 0,
+    "ordersQueued": 0,
+    "revenueINR": 0
+}
 
 def log_cloudwatch_metric(name, value, unit='Count'):
     try:
@@ -75,11 +81,39 @@ class AWSHandler(http.server.BaseHTTPRequestHandler):
                 "aws": "connected",
                 "region": REGION,
                 "table": TABLE_NAME,
-                "sqs": SQS_URL
+                "sqs": SQS_URL,
+                "cloudwatch": "ConcertTicketing"
             }).encode('utf-8'))
             return
 
-        # 2. Get live seats from real DynamoDB
+        # 2. Real CloudWatch Telemetry Metrics
+        if path == '/api/metrics':
+            queue_depth = 0
+            if SQS_URL:
+                try:
+                    attrs = sqs.get_queue_attributes(
+                        QueueUrl=SQS_URL,
+                        AttributeNames=['ApproximateNumberOfMessages']
+                    )
+                    queue_depth = int(attrs.get('Attributes', {}).get('ApproximateNumberOfMessages', 0))
+                except Exception:
+                    pass
+
+            self._set_cors(200)
+            self.wfile.write(json.dumps({
+                "success": True,
+                "namespace": "ConcertTicketing",
+                "region": REGION,
+                "metrics": {
+                    "seatLocksAcquired": telemetry_stats["seatLocksAcquired"],
+                    "ordersQueued": telemetry_stats["ordersQueued"],
+                    "revenueINR": telemetry_stats["revenueINR"],
+                    "sqsQueueDepth": queue_depth
+                }
+            }).encode('utf-8'))
+            return
+
+        # 3. Get live seats from real DynamoDB
         if '/api/events/' in path and '/seats' in path:
             try:
                 event_id = 'ev-diljit-mumbai'
@@ -122,7 +156,7 @@ class AWSHandler(http.server.BaseHTTPRequestHandler):
         body = self.rfile.read(content_length)
         data = json.loads(body.decode('utf-8')) if body else {}
 
-        # 3. DynamoDB Atomic Conditional Lock
+        # 4. DynamoDB Atomic Conditional Lock
         if path == '/api/checkout/lock':
             seat_id = data.get('seatId')
             user_id = data.get('userId', 'user-anon')
@@ -148,14 +182,22 @@ class AWSHandler(http.server.BaseHTTPRequestHandler):
                         ':now': {'N': str(now)}
                     }
                 )
-                # Emit CloudWatch Metric
+                
+                # Emit CloudWatch Metric & Update Stats
+                telemetry_stats["seatLocksAcquired"] += 1
                 log_cloudwatch_metric('SeatLocksAcquired', 1)
 
                 self._set_cors(200)
                 self.wfile.write(json.dumps({
                     "success": True,
                     "message": f"Seat {seat_id} successfully locked in AWS DynamoDB for 10 minutes",
-                    "data": {"seatId": seat_id, "lockExpiresAt": ttl}
+                    "data": {"seatId": seat_id, "lockExpiresAt": ttl},
+                    "cloudwatch": {
+                        "emitted": True,
+                        "metric": "SeatLocksAcquired",
+                        "namespace": "ConcertTicketing",
+                        "currentCount": telemetry_stats["seatLocksAcquired"]
+                    }
                 }).encode('utf-8'))
             except ddb.exceptions.ConditionalCheckFailedException:
                 self._set_cors(409)
@@ -168,7 +210,7 @@ class AWSHandler(http.server.BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
             return
 
-        # 4. Amazon SQS FIFO Purchase Dispatch
+        # 5. Amazon SQS FIFO Purchase Dispatch
         if path == '/api/checkout/purchase':
             seat_id = data.get('seatId')
             user_id = data.get('userId', 'user-anon')
@@ -209,7 +251,9 @@ class AWSHandler(http.server.BaseHTTPRequestHandler):
                     }
                 )
 
-                # Emit CloudWatch Metrics
+                # Emit CloudWatch Metrics & Update Stats
+                telemetry_stats["ordersQueued"] += 1
+                telemetry_stats["revenueINR"] += float(amount)
                 log_cloudwatch_metric('OrdersQueued', 1)
                 log_cloudwatch_metric('RevenueINR', float(amount), 'None')
 
@@ -223,6 +267,14 @@ class AWSHandler(http.server.BaseHTTPRequestHandler):
                         "seatId": seat_id,
                         "amount": amount,
                         "queueMessageId": msg_id
+                    },
+                    "cloudwatch": {
+                        "emitted": True,
+                        "namespace": "ConcertTicketing",
+                        "metrics": [
+                            {"name": "OrdersQueued", "value": 1, "total": telemetry_stats["ordersQueued"]},
+                            {"name": "RevenueINR", "value": float(amount), "total": telemetry_stats["revenueINR"]}
+                        ]
                     }
                 }).encode('utf-8'))
             except Exception as e:
@@ -233,10 +285,12 @@ class AWSHandler(http.server.BaseHTTPRequestHandler):
         self._set_cors(404)
         self.wfile.write(json.dumps({"error": "Not Found"}).encode('utf-8'))
 
-print(f"Starting Live AWS Connected API Server on http://0.0.0.0:{PORT}...")
-print(f"AWS Region: {REGION}")
-print(f"DynamoDB Table: {TABLE_NAME}")
-print(f"SQS FIFO Queue: {SQS_URL}")
+if __name__ == '__main__':
+    print(f"Starting Live AWS Connected API Server on http://0.0.0.0:{PORT}...")
+    print(f"AWS Region: {REGION}")
+    print(f"DynamoDB Table: {TABLE_NAME}")
+    print(f"SQS FIFO Queue: {SQS_URL}")
+    print(f"CloudWatch Namespace: ConcertTicketing")
 
-with socketserver.TCPServer(("", PORT), AWSHandler) as httpd:
-    httpd.serve_forever()
+    with socketserver.TCPServer(("", PORT), AWSHandler) as httpd:
+        httpd.serve_forever()

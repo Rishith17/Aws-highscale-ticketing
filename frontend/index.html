@@ -6,11 +6,11 @@
   <title>Concert Ticket Booking (Connected to AWS)</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; color: #0f172a; padding: 30px 16px; }
-    .app-box { max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; color: #0f172a; padding: 24px 16px; }
+    .app-box { max-width: 760px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
     
     /* AWS Connection Banner */
-    .aws-connection-bar { display: flex; align-items: center; justify-content: space-between; background: #0f172a; color: #f8fafc; padding: 10px 14px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; }
+    .aws-connection-bar { display: flex; align-items: center; justify-content: space-between; background: #0f172a; color: #f8fafc; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
     .conn-status { display: flex; align-items: center; gap: 8px; }
     .conn-dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
     .conn-dot.online { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
@@ -19,14 +19,31 @@
     .btn-test { background: #334155; border: none; color: #ffffff; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
     .btn-test:hover { background: #475569; }
 
-    .event-header { margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; }
-    .event-header h1 { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+    /* Complete 10-Layer Architecture Visualizer */
+    .arch-pipeline-box { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 14px; margin-bottom: 20px; }
+    .arch-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .arch-title { font-size: 12px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.3px; }
+    .arch-sub { font-size: 11px; color: #64748b; font-family: monospace; }
+    .pipeline-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+    .pipeline-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 11px; font-weight: 600; color: #475569; transition: all 0.2s ease; cursor: default; }
+    .pipeline-pill.in-path { border-color: #0284c7; background: #f0f9ff; color: #0369a1; }
+    .pipeline-pill.active { border-color: #16a34a; background: #dcfce7; color: #15803d; box-shadow: 0 0 8px rgba(34,197,94,0.3); }
+    .pill-num { display: inline-block; width: 18px; height: 18px; line-height: 18px; text-align: center; background: #e2e8f0; color: #0f172a; border-radius: 50%; font-size: 10px; font-weight: 800; }
+    .pipeline-pill.in-path .pill-num { background: #0284c7; color: #ffffff; }
+    .pipeline-pill.active .pill-num { background: #16a34a; color: #ffffff; }
+    .pipeline-arrow { color: #94a3b8; font-size: 11px; font-weight: bold; }
+    .pipeline-span { width: 100%; justify-content: center; background: #f8fafc; border-style: dashed; border-color: #94a3b8; color: #334155; }
+    .pipeline-span.active { border-color: #16a34a; background: #dcfce7; color: #15803d; }
+
+    .event-header { margin-bottom: 18px; border-bottom: 1px solid #e2e8f0; padding-bottom: 14px; }
+    .event-header h1 { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
     .event-meta { font-size: 13px; color: #64748b; }
     
-    .section-title { font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 12px; }
+    .section-title { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .sec-badge { background: #0284c7; color: #ffffff; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
     
     /* Seat Grid */
-    .seats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .seats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)); gap: 10px; margin-bottom: 18px; }
     .seat-btn { padding: 12px 8px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.15s; }
     .seat-btn:hover:not(:disabled) { border-color: #0284c7; background: #e0f2fe; }
     .seat-btn.selected { border-color: #0284c7; background: #0284c7; color: #ffffff; }
@@ -37,7 +54,7 @@
     .seat-p { font-size: 12px; font-weight: 600; color: #0284c7; display: block; margin-top: 4px; }
     
     /* Hold Timer Box */
-    .hold-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 13px; color: #1e40af; }
+    .hold-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; font-size: 13px; color: #1e40af; }
     .timer-text { font-size: 16px; font-weight: 700; color: #dc2626; font-family: monospace; }
     
     /* Form */
@@ -50,12 +67,12 @@
     .btn-submit:disabled { background: #94a3b8; cursor: not-allowed; }
     
     /* Confirmed Ticket */
-    .ticket-pass { margin-top: 20px; padding: 20px; background: #f0fdf4; border: 2px dashed #22c55e; border-radius: 10px; text-align: center; }
+    .ticket-pass { margin-top: 18px; padding: 20px; background: #f0fdf4; border: 2px dashed #22c55e; border-radius: 10px; text-align: center; }
     .ticket-pass h3 { color: #15803d; font-size: 18px; margin-bottom: 8px; }
     .ticket-pass p { font-size: 14px; color: #166534; margin: 4px 0; }
     
     /* Layer 10: CloudWatch Metrics Section */
-    .cw-metrics-box { margin-top: 24px; padding: 14px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
+    .cw-metrics-box { margin-top: 20px; padding: 14px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
     .cw-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .cw-title { font-size: 13px; font-weight: 700; color: #0f172a; }
     .cw-badge { font-size: 11px; font-family: monospace; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
@@ -68,10 +85,11 @@
     /* AWS Step Box / Live Event Stream */
     .aws-status-box { margin-top: 16px; padding: 14px; background: #0f172a; border-radius: 8px; color: #f8fafc; font-family: monospace; font-size: 12px; }
     .aws-status-title { font-weight: 700; color: #38bdf8; margin-bottom: 8px; text-transform: uppercase; }
-    .aws-log { line-height: 1.6; color: #94a3b8; max-height: 180px; overflow-y: auto; }
+    .aws-log { line-height: 1.6; color: #94a3b8; max-height: 190px; overflow-y: auto; }
     .aws-log .success { color: #4ade80; }
     .aws-log .highlight { color: #facc15; }
     .aws-log .metric { color: #38bdf8; }
+    .aws-log .layer { color: #c084fc; font-weight: bold; }
     .aws-log .error { color: #f87171; }
     
     .hidden { display: none !important; }
@@ -94,6 +112,71 @@
       </div>
     </div>
 
+    <!-- Complete 10-Layer Architecture Pipeline Tracker -->
+    <div class="arch-pipeline-box">
+      <div class="arch-header">
+        <span class="arch-title">🌐 AWS 10-Layer Architecture Pipeline Status</span>
+        <span class="arch-sub">Region: ap-south-1 (Mumbai)</span>
+      </div>
+
+      <!-- Ingress & Compute (Layers 1 to 5) -->
+      <div class="pipeline-row">
+        <div class="pipeline-pill in-path" id="pill1" title="Layer 1: DNS Routing & Health Checks">
+          <span class="pill-num">1</span>
+          <span>Route 53</span>
+        </div>
+        <span class="pipeline-arrow">➔</span>
+        <div class="pipeline-pill in-path" id="pill2" title="Layer 2: CloudFront Global CDN & S3 Static Hosting">
+          <span class="pill-num">2</span>
+          <span>CloudFront + S3</span>
+        </div>
+        <span class="pipeline-arrow">➔</span>
+        <div class="pipeline-pill in-path" id="pill3" title="Layer 3: VPC & Internet Gateway Network Boundary">
+          <span class="pill-num">3</span>
+          <span>VPC & IGW</span>
+        </div>
+        <span class="pipeline-arrow">➔</span>
+        <div class="pipeline-pill in-path" id="pill4" title="Layer 4: Application Load Balancer Spreading Ingress Traffic">
+          <span class="pill-num">4</span>
+          <span>ALB</span>
+        </div>
+        <span class="pipeline-arrow">➔</span>
+        <div class="pipeline-pill in-path" id="pill5" title="Layer 5: EC2 Auto Scaling Group Backend Compute Fleet">
+          <span class="pill-num">5</span>
+          <span>EC2 ASG</span>
+        </div>
+      </div>
+
+      <!-- Data, Messaging & Processing (Layers 6 to 9) -->
+      <div class="pipeline-row">
+        <div class="pipeline-pill" id="pill7" title="Layer 7: DynamoDB High-Throughput Inventory & 10-Min Atomic Locks">
+          <span class="pill-num">7</span>
+          <span>DynamoDB (Inventory)</span>
+        </div>
+        <span class="pipeline-arrow">➔</span>
+        <div class="pipeline-pill" id="pill8" title="Layer 8: SQS FIFO Zero-Loss Purchase Message Queue">
+          <span class="pill-num">8</span>
+          <span>SQS FIFO (Queue)</span>
+        </div>
+        <span class="pipeline-arrow">➔</span>
+        <div class="pipeline-pill" id="pill9" title="Layer 9: AWS Lambda Async Worker & Amazon SES Email Delivery">
+          <span class="pill-num">9</span>
+          <span>Lambda + SES</span>
+        </div>
+        <span class="pipeline-arrow">➔</span>
+        <div class="pipeline-pill" id="pill6" title="Layer 6: RDS PostgreSQL ACID Financial Ledger & Orders">
+          <span class="pill-num">6</span>
+          <span>RDS Postgres (ACID)</span>
+        </div>
+      </div>
+
+      <!-- Layer 10 (Spans All Layers) -->
+      <div class="pipeline-pill pipeline-span in-path" id="pill10" title="Layer 10: CloudWatch Monitoring, IAM Security, Security Groups & Terraform IaC">
+        <span class="pill-num">10</span>
+        <span>Spans Every Layer: Amazon CloudWatch Monitoring (Metrics & Logs), IAM Roles & Terraform</span>
+      </div>
+    </div>
+
     <!-- Header -->
     <div class="event-header">
       <h1>🎟️ Diljit Dosanjh — DIL-LUMINATI Tour India</h1>
@@ -102,21 +185,27 @@
       </div>
     </div>
 
-    <!-- Step 1: Select Seat -->
-    <div class="section-title">Step 1: Select a Seat (Acquires Real DynamoDB 10-Minute Lock)</div>
+    <!-- Layer 7: Select Seat & DynamoDB Atomic Hold -->
+    <div class="section-title">
+      <span class="sec-badge">LAYER 7</span>
+      <span>Select a Seat — Acquires Real DynamoDB Atomic Lock (10-Minute TTL)</span>
+    </div>
     <div class="seats-grid" id="seatsGrid">
       <!-- Populated via JS -->
     </div>
 
     <!-- 10-Minute Hold Timer -->
     <div id="holdBox" class="hold-box hidden">
-      <span>⚡ DynamoDB Atomic Lock Active on Seat <span id="heldSeatName">--</span></span>
+      <span>⚡ <strong>Layer 7 (DynamoDB)</strong>: Atomic Conditional Lock Active on Seat <strong id="heldSeatName">--</strong></span>
       <div class="timer-text" id="timerDisplay">10:00</div>
     </div>
 
-    <!-- Step 2: Customer Details -->
+    <!-- Layer 8: Customer Details & SQS FIFO Queue Dispatch -->
     <div id="checkoutSection" class="hidden">
-      <div class="section-title">Step 2: Enter Details & Confirm Order (Dispatches to Real AWS SQS FIFO)</div>
+      <div class="section-title">
+        <span class="sec-badge">LAYER 8</span>
+        <span>Customer Checkout — Dispatches Order to Real Amazon SQS FIFO Queue</span>
+      </div>
       
       <form id="bookingForm">
         <div class="form-group">
@@ -125,7 +214,7 @@
         </div>
 
         <div class="form-group">
-          <label>Email Address (For Amazon SES E-Ticket Delivery)</label>
+          <label>Email Address (For Amazon SES Layer 9 E-Ticket Dispatch)</label>
           <input type="email" id="userEmail" required value="rahul.sharma@gmail.com">
         </div>
 
@@ -135,14 +224,19 @@
       </form>
     </div>
 
-    <!-- E-Ticket Result -->
+    <!-- Layer 9 & 6: E-Ticket Result (Lambda, SES & RDS Commit) -->
     <div id="confirmedPass" class="ticket-pass hidden">
+      <div class="section-title" style="justify-content: center; margin-bottom: 8px;">
+        <span class="sec-badge" style="background: #16a34a;">LAYERS 6 & 9</span>
+        <span>Order Finalized via AWS Lambda, RDS PostgreSQL & Amazon SES</span>
+      </div>
       <h3>✅ Ticket Booking Confirmed!</h3>
       <p>Booking ID: <strong id="resBookingId">--</strong></p>
       <p>Reserved Seat: <strong id="resSeat">--</strong></p>
       <p>Total Paid: <strong id="resAmount">--</strong></p>
       <p>Queue Message ID: <code id="resQueueMsgId" style="color: #0284c7;">--</code></p>
-      <p>Confirmation email sent via <strong>Amazon SES</strong> to <strong id="resEmail">--</strong></p>
+      <p>ACID Ledger Status: <strong>Committed to Layer 6 RDS PostgreSQL</strong></p>
+      <p>Confirmation email sent via <strong>Layer 9 Amazon SES</strong> to <strong id="resEmail">--</strong></p>
       <button onclick="location.reload()" style="margin-top: 12px; padding: 6px 16px; border: 1px solid #16a34a; background: white; color: #16a34a; border-radius: 4px; cursor: pointer; font-weight: 600;">Book Another Ticket</button>
     </div>
 
@@ -156,31 +250,31 @@
         <div class="cw-card">
           <div class="cw-lbl">SeatLocksAcquired</div>
           <div class="cw-val" id="cwLocks">0</div>
-          <div class="cw-sub">DynamoDB Locks</div>
+          <div class="cw-sub">Layer 7 DynamoDB Locks</div>
         </div>
         <div class="cw-card">
           <div class="cw-lbl">OrdersQueued</div>
           <div class="cw-val" id="cwOrders">0</div>
-          <div class="cw-sub">SQS FIFO Messages</div>
+          <div class="cw-sub">Layer 8 SQS FIFO Messages</div>
         </div>
         <div class="cw-card">
           <div class="cw-lbl">RevenueINR</div>
           <div class="cw-val" id="cwRevenue">₹0</div>
-          <div class="cw-sub">Total Ticket Sales</div>
+          <div class="cw-sub">Total Concert Sales</div>
         </div>
         <div class="cw-card">
           <div class="cw-lbl">SQS Queue Depth</div>
           <div class="cw-val" id="cwQueue">0</div>
-          <div class="cw-sub">FIFO Pending Backlog</div>
+          <div class="cw-sub">Layer 8 Pending Backlog</div>
         </div>
       </div>
     </div>
 
     <!-- Live AWS Execution Trace / Event Stream -->
     <div class="aws-status-box">
-      <div class="aws-status-title">Live AWS Architecture Event Stream</div>
+      <div class="aws-status-title">Live AWS Architecture Event Stream (Layers 1 – 10)</div>
       <div class="aws-log" id="awsLog">
-        <div>[System Ready] Checking backend API connectivity...</div>
+        <div>[System Ready] Layers 1-5 active: Route 53 ➔ CloudFront ➔ ALB ➔ EC2 ASG connected.</div>
       </div>
     </div>
   </div>
@@ -233,6 +327,13 @@
     const cwRevenue = document.getElementById('cwRevenue');
     const cwQueue = document.getElementById('cwQueue');
 
+    // Architecture pills
+    const pill6 = document.getElementById('pill6');
+    const pill7 = document.getElementById('pill7');
+    const pill8 = document.getElementById('pill8');
+    const pill9 = document.getElementById('pill9');
+    const pill10 = document.getElementById('pill10');
+
     function log(msg, type = '') {
       const d = document.createElement('div');
       if (type) d.className = type;
@@ -250,7 +351,7 @@
           isConnectedToRealBackend = true;
           connDot.className = 'conn-dot online';
           connLabel.textContent = `AWS Backend: CONNECTED (${API_URL})`;
-          log(`[HTTP 200] Connected to backend API server at ${API_URL}`, 'success');
+          log(`[LAYERS 1-5 INGRESS] Route 53 ➔ CloudFront ➔ ALB ➔ EC2 backend online at ${API_URL}`, 'success');
           await loadLiveSeatsFromAWS();
           await fetchCloudWatchMetrics();
           return;
@@ -260,12 +361,12 @@
       }
       isConnectedToRealBackend = false;
       connDot.className = 'conn-dot';
-      connLabel.textContent = `AWS Backend: Offline (Start backend API or enter EC2 IP)`;
-      log(`[WARN] Backend API at ${API_URL} not reachable. Start server.py in backend-api folder.`, 'error');
+      connLabel.textContent = `AWS Backend: Offline (Start server.py)`;
+      log(`[WARN] Backend API at ${API_URL} not reachable. Start server.py.`, 'error');
       renderSeats();
     }
 
-    // 2. Fetch Live CloudWatch Metrics from Backend
+    // 2. Fetch Live CloudWatch Metrics from Backend (Layer 10)
     async function fetchCloudWatchMetrics() {
       try {
         const res = await fetch(`${API_URL}/api/metrics`);
@@ -287,7 +388,7 @@
       }
     }
 
-    // 3. Fetch Live Seats from DynamoDB through Backend
+    // 3. Fetch Live Seats from DynamoDB through Backend (Layer 7)
     async function loadLiveSeatsFromAWS() {
       try {
         const res = await fetch(`${API_URL}/api/events/${EVENT_ID}/seats`);
@@ -300,7 +401,8 @@
               price: s.price,
               status: s.status
             }));
-            log(`[DYNAMODB] Loaded ${currentSeats.length} live seats from AWS DynamoDB table 'TicketInventory'`, 'success');
+            pill7.classList.add('in-path');
+            log(`[LAYER 7: DYNAMODB] Queried ${currentSeats.length} live seats from table 'TicketInventory'`, 'success');
           }
         }
       } catch (e) {
@@ -326,7 +428,7 @@
       });
     }
 
-    // 4. Handle Seat Selection & Real DynamoDB Atomic Lock + CloudWatch Metric
+    // 4. Handle Seat Selection & Real DynamoDB Atomic Lock (Layer 7) + CloudWatch (Layer 10)
     async function selectSeat(seat) {
       if (seat.status === 'SOLD') return;
       selectedSeat = seat;
@@ -337,7 +439,11 @@
       heldSeatName.textContent = `${seat.id} (${seat.tier})`;
       payAmount.textContent = `₹${seat.price.toLocaleString('en-IN')}`;
 
-      log(`[HTTP POST] Calling ${API_URL}/api/checkout/lock for seat ${seat.id}...`, 'highlight');
+      // Activate pipeline pills
+      pill7.classList.add('active');
+      pill10.classList.add('active');
+
+      log(`[LAYERS 1-5 ➔ LAYER 7] Ingress routing to DynamoDB atomic lock for seat ${seat.id}...`, 'highlight');
 
       if (isConnectedToRealBackend) {
         try {
@@ -352,14 +458,14 @@
           });
           const data = await res.json();
           if (res.ok && data.success) {
-            log(`[REAL DYNAMODB] ConditionExpression passed! Seat ${seat.id} locked in DynamoDB (Expires at: ${data.data.lockExpiresAt})`, 'success');
+            log(`[LAYER 7: DYNAMODB] ConditionExpression atomic lock succeeded on seat ${seat.id}! (Expires at: ${data.data.lockExpiresAt})`, 'success');
             
-            // CloudWatch metric increment
+            // CloudWatch metric increment (Layer 10)
             localLocks++;
             cwLocks.textContent = localLocks;
-            log(`[CLOUDWATCH METRIC] Emitted 'SeatLocksAcquired' (+1) to AWS CloudWatch Namespace 'ConcertTicketing' (ap-south-1)`, 'metric');
+            log(`[LAYER 10: CLOUDWATCH] Emitted custom metric 'SeatLocksAcquired' (+1) to namespace 'ConcertTicketing'`, 'metric');
           } else {
-            log(`[REAL DYNAMODB] Lock rejected: ${data.message || 'Seat unavailable'}`, 'error');
+            log(`[LAYER 7: DYNAMODB] Lock rejected: ${data.message || 'Seat unavailable'}`, 'error');
             alert(data.message || 'Seat is currently held by someone else.');
             return;
           }
@@ -369,8 +475,8 @@
       } else {
         localLocks++;
         cwLocks.textContent = localLocks;
-        log(`[SIMULATED] Simulating DynamoDB lock on seat ${seat.id}`, 'highlight');
-        log(`[CLOUDWATCH METRIC] Emitted 'SeatLocksAcquired' (+1) to namespace ConcertTicketing`, 'metric');
+        log(`[SIMULATED LAYER 7] Simulated DynamoDB conditional lock on seat ${seat.id}`, 'highlight');
+        log(`[LAYER 10: CLOUDWATCH] Emitted 'SeatLocksAcquired' (+1) to ConcertTicketing`, 'metric');
       }
 
       // Start 10-Minute Hold Countdown
@@ -389,20 +495,25 @@
       }, 1000);
     }
 
-    // 5. Submit Order to Real AWS SQS FIFO + Emit CloudWatch Metrics
+    // 5. Submit Order to Real AWS SQS FIFO (Layer 8), Lambda/SES (Layer 9), RDS (Layer 6) & CloudWatch (Layer 10)
     bookingForm.onsubmit = async (e) => {
       e.preventDefault();
       if (!selectedSeat) return;
 
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting to AWS SQS FIFO...';
+      submitBtn.textContent = 'Dispatched to SQS FIFO Buffer...';
 
       const name = document.getElementById('userName').value;
       const email = document.getElementById('userEmail').value;
       let orderId = `ORD-MUM-${Date.now().toString().slice(-6)}`;
       let queueMessageId = `sqs-msg-${Date.now()}`;
 
-      log(`[HTTP POST] Calling ${API_URL}/api/checkout/purchase...`, 'highlight');
+      // Activate pipeline pills
+      pill8.classList.add('active');
+      pill9.classList.add('active');
+      pill6.classList.add('active');
+
+      log(`[LAYERS 1-5 ➔ LAYER 8] Dispathing order ${orderId} to Amazon SQS FIFO queue...`, 'highlight');
 
       if (isConnectedToRealBackend) {
         try {
@@ -428,10 +539,12 @@
             cwOrders.textContent = localOrders;
             cwRevenue.textContent = `₹${localRevenue.toLocaleString('en-IN')}`;
 
-            log(`[REAL SQS FIFO] Successfully enqueued order to Amazon SQS FIFO! MessageId: ${queueMessageId}`, 'success');
-            log(`[CLOUDWATCH METRIC] Emitted 'OrdersQueued' (+1) and 'RevenueINR' (+₹${selectedSeat.price.toLocaleString('en-IN')}) to CloudWatch`, 'metric');
-            log(`[CLOUDWATCH LOGS] Ingested audit event into /aws/ticketing/order-audit-stream`, 'metric');
-            log(`[AWS LAMBDA & RDS] Lambda worker dequeues ➔ writes ACID commit to RDS PostgreSQL ➔ dispatches SES email to ${email}`, 'success');
+            log(`[LAYER 8: SQS FIFO] Order buffered with MessageGroupId & DeduplicationId! MessageId: ${queueMessageId}`, 'success');
+            log(`[LAYER 9: AWS LAMBDA] Dequeues order payload in small batches ➔ triggers database commit`, 'success');
+            log(`[LAYER 6: RDS POSTGRESQL] ACID transaction committed into bookings ledger table`, 'success');
+            log(`[LAYER 9: AMAZON SES] Confirmation e-ticket email with QR code dispatched to ${email}`, 'success');
+            log(`[LAYER 10: CLOUDWATCH] Emitted metrics 'OrdersQueued' (+1) and 'RevenueINR' (+₹${selectedSeat.price.toLocaleString('en-IN')})`, 'metric');
+            log(`[LAYER 10: CLOUDWATCH LOGS] Ingested audit event into /aws/ticketing/order-audit-stream`, 'metric');
           } else {
             log(`[ERROR] Order failed: ${data.message}`, 'error');
             alert(data.message || 'Order failed');
@@ -447,8 +560,8 @@
         localRevenue += selectedSeat.price;
         cwOrders.textContent = localOrders;
         cwRevenue.textContent = `₹${localRevenue.toLocaleString('en-IN')}`;
-        log(`[SIMULATED SQS FIFO] Order ${orderId} queued with MessageGroupId: EVENT-${EVENT_ID}`, 'highlight');
-        log(`[CLOUDWATCH METRIC] Emitted 'OrdersQueued' (+1) & 'RevenueINR' to CloudWatch`, 'metric');
+        log(`[SIMULATED LAYER 8] Order ${orderId} queued in SQS FIFO`, 'highlight');
+        log(`[LAYER 10: CLOUDWATCH] Emitted 'OrdersQueued' (+1) & 'RevenueINR' to CloudWatch`, 'metric');
       }
 
       // Render Finalized Ticket

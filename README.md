@@ -114,6 +114,7 @@ ALB measures traffic volume and server pressure using real-time **Amazon CloudWa
 │   └── main.tf                          # All-in-one single-file Terraform script
 └── scripts/
     ├── setup_aws_cloud.py               # Instant cloud provisioning script
+    ├── reset_seats.py                   # Restock & reset all concert seats in DynamoDB
     └── process_orders_worker.py         # SQS FIFO order queue processor
 ```
 

@@ -1,12 +1,11 @@
 {
   "name": "lambda-order-processor",
   "version": "1.0.0",
-  "description": "AWS Lambda worker for processing SQS FIFO ticket orders, updating RDS, and sending SES emails",
+  "description": "AWS Lambda worker for processing SQS FIFO ticket orders and updating RDS PostgreSQL",
   "main": "index.js",
   "type": "module",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.550.0",
-    "@aws-sdk/client-ses": "^3.550.0",
     "@aws-sdk/lib-dynamodb": "^3.550.0",
     "pg": "^8.11.5"
   }

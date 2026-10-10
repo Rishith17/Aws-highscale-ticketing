@@ -1,14 +1,14 @@
 version: '3.8'
 
 services:
-  # LocalStack simulating AWS DynamoDB, SQS, SES locally
+  # LocalStack simulating AWS DynamoDB and SQS locally
   localstack:
     image: localstack/localstack:latest
     container_name: ticketing-localstack
     ports:
       - "4566:4566"
     environment:
-      - SERVICES=dynamodb,sqs,ses
+      - SERVICES=dynamodb,sqs
       - AWS_DEFAULT_REGION=us-east-1
       - DOCKER_HOST=unix:///var/run/docker.sock
     volumes:

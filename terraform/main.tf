@@ -69,7 +69,7 @@ module "compute" {
   db_password                = var.db_password
 }
 
-# 5. Serverless Fulfillment Worker (Lambda, SQS Trigger, SES)
+# 5. Serverless Fulfillment Worker (Lambda, SQS Trigger, RDS Commit)
 module "lambda_worker" {
   source                     = "./modules/lambda_worker"
   project_name               = var.project_name
@@ -85,7 +85,6 @@ module "lambda_worker" {
   db_name                    = "ticketdb"
   db_user                    = "dbadmin"
   db_password                = var.db_password
-  ses_sender_email           = var.ses_sender_email
 }
 
 # 6. Global Edge & CDN (S3 Static Hosting, CloudFront Dual Origins, Route 53)

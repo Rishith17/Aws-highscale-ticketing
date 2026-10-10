@@ -159,9 +159,9 @@
           <span>SQS FIFO (Queue)</span>
         </div>
         <span class="pipeline-arrow">➔</span>
-        <div class="pipeline-pill" id="pill9" title="Layer 9: AWS Lambda Async Worker & Amazon SES Email Delivery">
+        <div class="pipeline-pill" id="pill9" title="Layer 9: AWS Lambda Async Worker & Order Processing">
           <span class="pill-num">9</span>
-          <span>Lambda + SES</span>
+          <span>Lambda (Worker)</span>
         </div>
         <span class="pipeline-arrow">➔</span>
         <div class="pipeline-pill" id="pill6" title="Layer 6: RDS PostgreSQL ACID Financial Ledger & Orders">
@@ -209,13 +209,13 @@
       
       <form id="bookingForm">
         <div class="form-group">
-          <label>Your Name</label>
+          <label>Attendee Name</label>
           <input type="text" id="userName" required value="Rishith">
         </div>
 
         <div class="form-group">
-          <label>Email Address (For Amazon SES Layer 9 E-Ticket Dispatch)</label>
-          <input type="email" id="userEmail" required value="rishith.gs@gmail.com">
+          <label>Contact Mobile Number</label>
+          <input type="tel" id="userPhone" required value="+91 98765 43210">
         </div>
 
         <button type="submit" id="submitBtn" class="btn-submit">
@@ -224,19 +224,21 @@
       </form>
     </div>
 
-    <!-- Layer 9 & 6: E-Ticket Result (Lambda, SES & RDS Commit) -->
+    <!-- Layer 9 & 6: E-Ticket Result (Lambda & RDS Commit) -->
     <div id="confirmedPass" class="ticket-pass hidden">
       <div class="section-title" style="justify-content: center; margin-bottom: 8px;">
         <span class="sec-badge" style="background: #16a34a;">LAYERS 6 & 9</span>
-        <span>Order Finalized via AWS Lambda, RDS PostgreSQL & Amazon SES</span>
+        <span>Order Finalized via AWS Lambda & RDS PostgreSQL</span>
       </div>
       <h3>✅ Ticket Booking Confirmed!</h3>
       <p>Booking ID: <strong id="resBookingId">--</strong></p>
+      <p>Attendee: <strong id="resAttendee">--</strong></p>
       <p>Reserved Seat: <strong id="resSeat">--</strong></p>
       <p>Total Paid: <strong id="resAmount">--</strong></p>
       <p>Queue Message ID: <code id="resQueueMsgId" style="color: #0284c7;">--</code></p>
-      <p>ACID Ledger Status: <strong>Committed to Layer 6 RDS PostgreSQL</strong></p>
-      <p>Confirmation email sent via <strong>Layer 9 Amazon SES</strong> to <strong id="resEmail">--</strong></p>
+      <p>Financial Ledger: <strong>Committed to Layer 6 RDS PostgreSQL</strong></p>
+      <div style="margin: 14px auto; max-width: 220px; padding: 10px; background: #0f172a; color: #f8fafc; border-radius: 8px; font-family: monospace; font-size: 22px; letter-spacing: 4px;">[ █ ▄ █ ▄ █ ]</div>
+      <p style="font-size: 12px; color: #16a34a; font-weight: 700;">OFFICIAL GATE ENTRY QR PASS ACTIVE</p>
       <button onclick="location.reload()" style="margin-top: 12px; padding: 6px 16px; border: 1px solid #16a34a; background: white; color: #16a34a; border-radius: 4px; cursor: pointer; font-weight: 600;">Book Another Ticket</button>
     </div>
 
@@ -495,7 +497,7 @@
       }, 1000);
     }
 
-    // 5. Submit Order to Real AWS SQS FIFO (Layer 8), Lambda/SES (Layer 9), RDS (Layer 6) & CloudWatch (Layer 10)
+    // 5. Submit Order to Real AWS SQS FIFO (Layer 8), Lambda (Layer 9), RDS (Layer 6) & CloudWatch (Layer 10)
     bookingForm.onsubmit = async (e) => {
       e.preventDefault();
       if (!selectedSeat) return;
@@ -504,7 +506,6 @@
       submitBtn.textContent = 'Dispatched to SQS FIFO Buffer...';
 
       const name = document.getElementById('userName').value;
-      const email = document.getElementById('userEmail').value;
       let orderId = `ORD-MUM-${Date.now().toString().slice(-6)}`;
       let queueMessageId = `sqs-msg-${Date.now()}`;
 
@@ -513,7 +514,7 @@
       pill9.classList.add('active');
       pill6.classList.add('active');
 
-      log(`[LAYERS 1-5 ➔ LAYER 8] Dispathing order ${orderId} to Amazon SQS FIFO queue...`, 'highlight');
+      log(`[LAYERS 1-5 ➔ LAYER 8] Dispatching order ${orderId} to Amazon SQS FIFO queue...`, 'highlight');
 
       if (isConnectedToRealBackend) {
         try {
@@ -524,7 +525,7 @@
               eventId: EVENT_ID,
               seatId: selectedSeat.id,
               userId: USER_ID,
-              customerEmail: email,
+              customerName: name,
               amount: selectedSeat.price
             })
           });
@@ -542,7 +543,6 @@
             log(`[LAYER 8: SQS FIFO] Order buffered with MessageGroupId & DeduplicationId! MessageId: ${queueMessageId}`, 'success');
             log(`[LAYER 9: AWS LAMBDA] Dequeues order payload in small batches ➔ triggers database commit`, 'success');
             log(`[LAYER 6: RDS POSTGRESQL] ACID transaction committed into bookings ledger table`, 'success');
-            log(`[LAYER 9: AMAZON SES] Confirmation e-ticket email with QR code dispatched to ${email}`, 'success');
             log(`[LAYER 10: CLOUDWATCH] Emitted metrics 'OrdersQueued' (+1) and 'RevenueINR' (+₹${selectedSeat.price.toLocaleString('en-IN')})`, 'metric');
             log(`[LAYER 10: CLOUDWATCH LOGS] Ingested audit event into /aws/ticketing/order-audit-stream`, 'metric');
           } else {
@@ -574,10 +574,10 @@
       confirmedPass.classList.remove('hidden');
 
       document.getElementById('resBookingId').textContent = orderId;
+      document.getElementById('resAttendee').textContent = name;
       document.getElementById('resSeat').textContent = `${selectedSeat.id} (${selectedSeat.tier})`;
       document.getElementById('resAmount').textContent = `₹${selectedSeat.price.toLocaleString('en-IN')} INR`;
       document.getElementById('resQueueMsgId').textContent = queueMessageId;
-      document.getElementById('resEmail').textContent = email;
 
       // Refresh metrics from AWS backend after purchase
       setTimeout(fetchCloudWatchMetrics, 1200);

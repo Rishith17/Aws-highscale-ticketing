@@ -25,7 +25,7 @@ An event-driven ticket booking architecture built on AWS to handle massive flash
 | **6** | **Amazon RDS PostgreSQL** | Relational ACID financial database committing permanent order records. |
 | **7** | **Amazon DynamoDB** | High-throughput inventory checks and **10-minute atomic conditional locks**. |
 | **8** | **Amazon SQS FIFO** | Zero-loss, strictly ordered, deduplicated purchase order buffer queue. |
-| **9** | **AWS Lambda & Amazon SES** | Async worker consuming SQS batches + dispatching e-ticket emails with QR codes. |
+| **9** | **AWS Lambda (Worker)** | Async consumer worker pulling SQS batches & executing database commits. |
 | **10** | **Amazon CloudWatch (Spans All Layers)** | Monitoring custom metrics (`SeatLocksAcquired`, `OrdersQueued`, `RevenueINR`) & audit logs across all layers. |
 
 ---
@@ -86,8 +86,8 @@ ALB measures traffic volume and server pressure using real-time **Amazon CloudWa
    An **AWS Lambda** worker pulls orders from the SQS queue in small, steady batches and commits the order into **Amazon RDS PostgreSQL** inside a safe transaction.
 5. **Permanent Allocation (Layer 7 DynamoDB)**:
    Lambda updates the seat state in DynamoDB from `LOCKED` to permanently `SOLD`.
-6. **E-Ticket Delivery (Layer 9 Amazon SES)**:
-   Lambda invokes **Amazon SES** to send an official confirmation email containing the attendee pass and entry QR code.
+6. **Digital E-Ticket Pass Generation**:
+   The application generates an official authenticated entry pass with unique Booking ID, allocated seat, and stadium entry QR code.
 7. **Real-Time Telemetry & Monitoring (Layer 10 Amazon CloudWatch)**:
    - Emits custom metrics under the **`ConcertTicketing`** namespace: `SeatLocksAcquired`, `OrdersQueued`, and `RevenueINR`.
    - Tracks SQS backlog queue depth (`ApproximateNumberOfMessages`) in real-time to monitor buffer load.
@@ -109,12 +109,12 @@ ALB measures traffic volume and server pressure using real-time **Amazon CloudWa
 │   └── src/                             # Node.js alternative backend
 ├── lambda-order-processor/
 │   ├── index.js                         # SQS FIFO consumer handler
-│   ├── db.js                            # RDS PostgreSQL ACID transaction
-│   └── emailService.js                  # Amazon SES ticket dispatcher
+│   └── db.js                            # RDS PostgreSQL ACID transaction
 ├── terraform-simple/
 │   └── main.tf                          # All-in-one single-file Terraform script
 └── scripts/
-    └── setup_aws_cloud.py               # Instant cloud provisioning script
+    ├── setup_aws_cloud.py               # Instant cloud provisioning script
+    └── process_orders_worker.py         # SQS FIFO order queue processor
 ```
 
 ---

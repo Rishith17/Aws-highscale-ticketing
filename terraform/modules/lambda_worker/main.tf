@@ -12,7 +12,7 @@ resource "aws_iam_role" "lambda_role" {
   })
 }
 
-# Lambda Policies: VPC execution, SQS consumption, DynamoDB update, SES send
+# Lambda Policies: VPC execution, SQS consumption, DynamoDB update
 resource "aws_iam_role_policy_attachment" "lambda_vpc" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
@@ -41,14 +41,6 @@ resource "aws_iam_role_policy" "lambda_custom_policy" {
           "dynamodb:GetItem"
         ]
         Resource = [var.dynamodb_table_arn, "${var.dynamodb_table_arn}/*"]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "ses:SendEmail",
-          "ses:SendRawEmail"
-        ]
-        Resource = "*"
       }
     ]
   })
@@ -87,7 +79,6 @@ resource "aws_lambda_function" "order_processor" {
       DB_NAME             = var.db_name
       DB_USER             = var.db_user
       DB_PASSWORD         = var.db_password
-      SES_SENDER_EMAIL    = var.ses_sender_email
     }
   }
 
@@ -105,7 +96,3 @@ resource "aws_lambda_event_source_mapping" "sqs_trigger" {
   enabled          = true
 }
 
-# 5. Verified SES Email Identity for confirmations
-resource "aws_ses_email_identity" "sender" {
-  email = var.ses_sender_email
-}

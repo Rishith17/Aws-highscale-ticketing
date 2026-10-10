@@ -71,7 +71,6 @@ const flowStatusText = document.getElementById('flowStatusText');
 const inspectDynamoJson = document.getElementById('inspectDynamoJson');
 const inspectSqsJson = document.getElementById('inspectSqsJson');
 const inspectRdsSql = document.getElementById('inspectRdsSql');
-const inspectSesJson = document.getElementById('inspectSesJson');
 
 // Pipeline nodes
 const pipeCf = document.getElementById('f-cf');
@@ -256,7 +255,7 @@ ticketBookingForm.addEventListener('submit', async (e) => {
   // Step 2: Lambda & RDS Commit Simulation
   setTimeout(() => {
     pulsePipeline(pipeLambda);
-    flowStatusText.innerHTML = `<strong>AWS Lambda & RDS:</strong> Pulled from SQS ➔ ACID write to PostgreSQL ➔ Email dispatched via SES to <code>${email}</code>!`;
+    flowStatusText.innerHTML = `<strong>AWS Lambda & RDS:</strong> Pulled from SQS ➔ ACID write to PostgreSQL ➔ Digital QR Pass generated!`;
   }, 700);
 
   // Step 3: Show E-Ticket
@@ -347,14 +346,12 @@ VALUES ('${orderId}', '${selectedSeat.seatId}', ${selectedSeat.price}.00);
 
 COMMIT;`;
 
-  inspectSesJson.textContent = JSON.stringify({
-    Source: "tickets@concerts-india.com",
-    Destination: { ToAddresses: [email] },
-    Message: {
-      Subject: `🎟️ Diljit DIL-LUMINATI Tour — Booking Confirmed (#${orderId})`,
-      Body: `Official Gate Entry Pass attached for Seat ${selectedSeat.seatId}. Total Paid: ₹${selectedSeat.price.toLocaleString('en-IN')} INR.`
-    }
-  }, null, 2);
+  if (document.getElementById('inspectSesJson')) {
+    document.getElementById('inspectSesJson').textContent = JSON.stringify({
+      status: "DISABLED",
+      message: "SES removed - Instant digital entry QR pass issued directly."
+    }, null, 2);
+  }
 }
 
 // Initialize

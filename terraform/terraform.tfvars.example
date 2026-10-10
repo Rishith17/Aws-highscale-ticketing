@@ -3,7 +3,6 @@ environment         = "prod"
 aws_region          = "us-east-1"
 vpc_cidr            = "10.0.0.0/16"
 db_password         = "ChangeMeToAStrongPassword123!"
-ses_sender_email    = "tickets@cloud-ticketing.com"
 
 # Optional: Set these if you want to bind a Route 53 domain
 # custom_domain_name  = "tickets.example.com"

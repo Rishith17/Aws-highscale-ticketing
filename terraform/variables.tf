@@ -28,12 +28,6 @@ variable "db_password" {
   description = "Master password for RDS database"
 }
 
-variable "ses_sender_email" {
-  type        = string
-  default     = "tickets@cloud-ticketing.com"
-  description = "Sender email address for Amazon SES"
-}
-
 variable "custom_domain_name" {
   type        = string
   default     = ""

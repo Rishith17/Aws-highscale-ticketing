@@ -33,7 +33,4 @@ awslocal sqs create-queue \
     --attributes "FifoQueue=true,ContentBasedDeduplication=true,RedrivePolicy={\"deadLetterTargetArn\":\"${DLQ_ARN}\",\"maxReceiveCount\":\"3\"}" \
     --region us-east-1
 
-# Verify SES Sender Identity
-awslocal ses verify-email-identity --email-address tickets@cloud-ticketing.com --region us-east-1
-
 echo "LocalStack AWS resources successfully provisioned!"

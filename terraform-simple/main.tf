@@ -29,11 +29,6 @@ variable "db_password" {
   description = "Master password for PostgreSQL database"
 }
 
-variable "ses_email" {
-  type        = string
-  default     = "your-email@gmail.com"
-  description = "Your email address to receive concert ticket confirmations"
-}
 
 # ==============================================================================
 # 1. NETWORKING (Simple Default VPC or Dedicated VPC)
@@ -158,11 +153,8 @@ resource "aws_db_instance" "postgres" {
 }
 
 # ==============================================================================
-# 5. AMAZON SES & LAMBDA WORKER (Step 9 in Diagram: Order Finalizer & Emailer)
+# 5. AWS LAMBDA WORKER (Step 9 in Diagram: Order Finalizer & Database Commit)
 # ==============================================================================
-resource "aws_ses_email_identity" "sender" {
-  email = var.ses_email
-}
 
 resource "aws_iam_role" "lambda_role" {
   name = "concert-lambda-exec-role"
@@ -203,11 +195,6 @@ resource "aws_iam_role_policy" "lambda_app_perms" {
         Effect   = "Allow"
         Action   = ["dynamodb:UpdateItem", "dynamodb:GetItem"]
         Resource = [aws_dynamodb_table.ticket_inventory.arn, "${aws_dynamodb_table.ticket_inventory.arn}/*"]
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["ses:SendEmail", "ses:SendRawEmail"]
-        Resource = "*"
       }
     ]
   })
@@ -244,7 +231,6 @@ resource "aws_lambda_function" "order_processor" {
       DB_NAME             = "ticketdb"
       DB_USER             = "dbadmin"
       DB_PASSWORD         = var.db_password
-      SES_SENDER_EMAIL    = var.ses_email
     }
   }
 }

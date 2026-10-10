@@ -30,42 +30,30 @@ An event-driven ticket booking architecture built on AWS to handle massive flash
 
 ---
 
-## Deep Dive: How Application Load Balancer (ALB) Works & Detects Traffic Surges
+## Deep Dive: How ALB Works & Scales Under Surge Traffic
 
-### 1. How ALB Works in the Request Path (Layer 4)
-* **Public Subnet Gateway**: ALB resides in a public subnet across multiple Availability Zones (AZs) behind an Internet Gateway. It acts as the single public entry point for all API requests.
-* **Layer 7 Intelligent Routing**: Operating at the Application Layer (HTTP/HTTPS), ALB inspects incoming requests and routes them to target groups based on paths (e.g. `/api/*` routed to the EC2 backend cluster, static content offloaded to CloudFront/S3).
-* **Least Outstanding Requests Balancing**: ALB continuously directs new connections to the EC2 instance with the fewest active pending requests, preventing any single server from getting overwhelmed.
-* **Continuous Health Checking**: ALB constantly pings `GET /health` on every registered EC2 instance (e.g. every 15 seconds). If an instance fails or hangs, ALB immediately removes it from the routing rotation in under 5 seconds.
-
----
-
-### 2. How ALB Auto-Scales Itself During a Flash Sale
-* ALB is a managed AWS service. Behind the scenes, ALB is **not a single server**—it is a fleet of elastic load balancer nodes managed by AWS.
-* As incoming HTTP requests per second (RPS) ramp up, AWS automatically provisions additional load balancer capacity behind the ALB DNS name.
-* **Pre-Warming**: For known mega-ticket drops (e.g. 500,000 fans hitting the site at 12:00 PM sharp), AWS can pre-warm the ALB so all frontend nodes are initialized ahead of the spike.
+### 1. In the Request Path (Layer 4)
+- **Public Entry Point**: Spans multiple Availability Zones to securely ingest all public API traffic.
+- **Layer 7 Path Routing**: Routes `/api/*` to EC2 backend targets while CloudFront/S3 serves static assets.
+- **Smart Balancing**: Uses *Least Outstanding Requests* to prevent any single server from overloading.
+- **Active Health Checks**: Pings `GET /health` every 15s; ejects failing instances in < 5s.
 
 ---
 
-### 3. How ALB Knows When "Too Many People Come" (Auto Scaling Trigger)
-ALB measures traffic volume and server pressure using real-time **Amazon CloudWatch metrics**:
+### 2. How ALB Scales Itself
+- **Elastic Fleet**: ALB is a managed multi-node cluster, not a single server. AWS auto-provisions balancer nodes as RPS rises.
+- **Pre-Warming**: Pre-scales ALB capacity ahead of known flash sales (e.g., Diljit tour drop) for zero latency on second 1.
 
-1. **`RequestCountPerTarget`**:
-   * ALB continuously calculates: `Total Requests / Number of Healthy EC2 Instances`.
-   * If 2 backend instances are running and suddenly 4,000 requests arrive per minute, `RequestCountPerTarget` jumps from 100 to 2,000.
-2. **`TargetResponseTime`**:
-   * Measures the time elapsed (in milliseconds) between when ALB forwards a request to an EC2 instance and when it receives the response.
-   * If CPU becomes saturated, response times spike (e.g. from 12ms to 850ms).
-3. **Triggering EC2 Auto Scaling (Layer 5)**:
-   * We attach a **Target Tracking Scaling Policy** to the EC2 Auto Scaling Group (ASG):
-     ```
-     Target metric: ALBRequestCountPerTarget
-     Target value: 500 requests per target
-     ```
-   * As soon as CloudWatch detects that `RequestCountPerTarget > 500`, it immediately signals the ASG to scale out from 2 instances to 10, 20, or 50 instances.
-4. **Zero Downtime Registration**:
-   * As new EC2 instances boot up in private subnets, the ASG registers them with the ALB Target Group.
-   * ALB runs health checks on them. Once healthy, ALB instantly begins spreading incoming connections across the enlarged fleet.
+---
+
+### 3. How ALB Detects Traffic Surges & Scales EC2 (Layer 5)
+1. **Tracks Metrics (CloudWatch)**:
+   - `RequestCountPerTarget`: Requests per healthy EC2 instance.
+   - `TargetResponseTime`: Server latency in milliseconds.
+2. **Triggers Auto Scaling Group (ASG)**:
+   - When `RequestCountPerTarget > 500`, CloudWatch signals ASG to instantly scale out (e.g., 2 ➔ 20 instances).
+3. **Zero-Downtime Traffic Handoff**:
+   - New EC2 instances boot, pass health checks, and immediately absorb traffic.
 
 ---
 

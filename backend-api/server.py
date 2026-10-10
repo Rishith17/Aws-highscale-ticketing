@@ -295,6 +295,43 @@ class AWSHandler(http.server.BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
             return
 
+        # 6. Admin Restock / Reset Seats in DynamoDB
+        if path == '/api/admin/reset-seats':
+            event_id = 'ev-diljit-mumbai'
+            default_seats = [
+                {'seatId': 'PIT-01', 'tier': 'Fan Pit (VIP)', 'price': 11999},
+                {'seatId': 'PIT-02', 'tier': 'Fan Pit (VIP)', 'price': 11999},
+                {'seatId': 'PLT-01', 'tier': 'Platinum Lounge', 'price': 6999},
+                {'seatId': 'PLT-02', 'tier': 'Platinum Lounge', 'price': 6999},
+                {'seatId': 'GLD-01', 'tier': 'Gold Seating', 'price': 3499},
+                {'seatId': 'GLD-02', 'tier': 'Gold Seating', 'price': 3499},
+                {'seatId': 'SLV-01', 'tier': 'Silver Standing', 'price': 1499},
+                {'seatId': 'SLV-02', 'tier': 'Silver Standing', 'price': 1499},
+            ]
+            try:
+                for s in default_seats:
+                    ddb.put_item(
+                        TableName=TABLE_NAME,
+                        Item={
+                            'PK': {'S': f'EVENT#{event_id}'},
+                            'SK': {'S': f"SEAT#{s['seatId']}"},
+                            'seatId': {'S': s['seatId']},
+                            'tier': {'S': s['tier']},
+                            'price': {'N': str(s['price'])},
+                            'status': {'S': 'AVAILABLE'},
+                            'currency': {'S': 'INR'}
+                        }
+                    )
+                self._set_cors(200)
+                self.wfile.write(json.dumps({
+                    "success": True,
+                    "message": "All concert seats restocked and reset to AVAILABLE in DynamoDB!"
+                }).encode('utf-8'))
+            except Exception as e:
+                self._set_cors(500)
+                self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
+            return
+
         self._set_cors(404)
         self.wfile.write(json.dumps({"error": "Not Found"}).encode('utf-8'))
 

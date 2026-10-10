@@ -44,14 +44,17 @@
     
     /* Seat Grid */
     .seats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)); gap: 10px; margin-bottom: 18px; }
-    .seat-btn { padding: 12px 8px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.15s; }
-    .seat-btn:hover:not(:disabled) { border-color: #0284c7; background: #e0f2fe; }
+    .seat-btn { padding: 12px 8px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.15s; }
+    .seat-btn:hover:not(:disabled) { border-color: #0284c7; background: #f0f9ff; transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(2,132,199,0.15); }
     .seat-btn.selected { border-color: #0284c7; background: #0284c7; color: #ffffff; }
     .seat-btn.selected .seat-p, .seat-btn.selected .seat-t { color: #e0f2fe; }
-    .seat-btn.sold { background: #f1f5f9; border-color: #e2e8f0; opacity: 0.4; cursor: not-allowed; }
+    .seat-btn.sold { background: #f8fafc; border-color: #e2e8f0; opacity: 0.55; cursor: not-allowed; }
     .seat-n { font-weight: 700; font-size: 14px; display: block; }
     .seat-t { font-size: 11px; color: #64748b; display: block; margin-top: 2px; }
     .seat-p { font-size: 12px; font-weight: 600; color: #0284c7; display: block; margin-top: 4px; }
+    .seat-status-pill { font-size: 9px; font-weight: 700; padding: 2px 5px; border-radius: 4px; display: inline-block; margin-top: 4px; }
+    .status-avail { background: #dcfce7; color: #15803d; }
+    .status-sold { background: #fee2e2; color: #b91c1c; }
     
     /* Hold Timer Box */
     .hold-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; font-size: 13px; color: #1e40af; }
@@ -186,9 +189,18 @@
     </div>
 
     <!-- Layer 7: Select Seat & DynamoDB Atomic Hold -->
-    <div class="section-title">
-      <span class="sec-badge">LAYER 7</span>
-      <span>Select a Seat — Acquires Real DynamoDB Atomic Lock (10-Minute TTL)</span>
+    <div class="section-title" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span class="sec-badge">LAYER 7</span>
+        <span>Select a Seat — Acquires Real DynamoDB Atomic Lock (10-Minute TTL)</span>
+      </div>
+      <button type="button" id="btnRestockInventory" style="background: #e0f2fe; color: #0284c7; border: 1px solid #7dd3fc; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Reset all seats to AVAILABLE in AWS DynamoDB">
+        <span>🔄 Restock Seats (Reset DynamoDB)</span>
+      </button>
+    </div>
+    <div id="soldOutBanner" class="hidden" style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
+      <span>⚠️ <strong>All seats currently booked!</strong> Click "Restock Seats" to reset DynamoDB inventory.</span>
+      <button type="button" onclick="restockSeats()" style="background: #dc2626; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">Restock Now</button>
     </div>
     <div class="seats-grid" id="seatsGrid">
       <!-- Populated via JS -->
@@ -415,19 +427,47 @@
 
     function renderSeats() {
       seatsGrid.innerHTML = '';
+      const soldOutBanner = document.getElementById('soldOutBanner');
+      const allSold = currentSeats.length > 0 && currentSeats.every(s => s.status === 'SOLD');
+      if (soldOutBanner) {
+        if (allSold) soldOutBanner.classList.remove('hidden');
+        else soldOutBanner.classList.add('hidden');
+      }
+
       currentSeats.forEach(seat => {
+        const isSold = seat.status === 'SOLD';
+        const isSelected = selectedSeat && selectedSeat.id === seat.id;
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = `seat-btn ${seat.status === 'SOLD' ? 'sold' : ''} ${selectedSeat && selectedSeat.id === seat.id ? 'selected' : ''}`;
-        btn.disabled = seat.status === 'SOLD';
+        btn.className = `seat-btn ${isSold ? 'sold' : ''} ${isSelected ? 'selected' : ''}`;
+        btn.disabled = isSold;
         btn.innerHTML = `
           <span class="seat-n">${seat.id}</span>
           <span class="seat-t">${seat.tier}</span>
           <span class="seat-p">₹${seat.price.toLocaleString('en-IN')}</span>
+          <span class="seat-status-pill ${isSold ? 'status-sold' : 'status-avail'}">${isSold ? '● Sold Out' : '● Available'}</span>
         `;
-        btn.onclick = () => selectSeat(seat);
+        if (!isSold) {
+          btn.onclick = () => selectSeat(seat);
+        }
         seatsGrid.appendChild(btn);
       });
+    }
+
+    async function restockSeats() {
+      const btn = document.getElementById('btnRestockInventory');
+      if (btn) btn.textContent = '🔄 Restocking DynamoDB...';
+      log('[ADMIN ACTION] Restocking all seats in AWS DynamoDB table TicketInventory...', 'highlight');
+      try {
+        const res = await fetch(`${API_URL}/api/admin/reset-seats`, { method: 'POST' });
+        if (res.ok) {
+          log('[LAYER 7: DYNAMODB] Restocked 8 seats to AVAILABLE successfully!', 'success');
+        }
+      } catch (e) {
+        log('[WARN] Could not reach backend reset endpoint, restocking locally...', 'highlight');
+      }
+      await loadLiveSeatsFromAWS();
+      if (btn) btn.innerHTML = '<span>🔄 Restock Seats (Reset DynamoDB)</span>';
     }
 
     // 4. Handle Seat Selection & Real DynamoDB Atomic Lock (Layer 7) + CloudWatch (Layer 10)
@@ -584,6 +624,7 @@
     };
 
     btnTestConn.onclick = checkBackend;
+    document.getElementById('btnRestockInventory').onclick = restockSeats;
 
     // Periodic telemetry polling every 5s
     setInterval(fetchCloudWatchMetrics, 5000);
